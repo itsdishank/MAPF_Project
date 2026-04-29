@@ -1,13 +1,19 @@
-# Multi-Agent Path Finding (MAPF) Simulation - Milestone 2
+# Multi-Agent Path Finding (MAPF) Simulation
 
-This repository contains the foundational environment and baseline A\* search implementation for a multi-agent warehouse simulation, developed for CS 57200.
-
-It includes the decoupled pathfinding logic, preliminary scaling and density experiments, and the structural scaffolding for the Conflict-Based Search (CBS) enhancement.
+This repository contains a full MAPF solver built for CS 57200, including a decoupled A\* baseline, standard Conflict-Based Search (CBS), a custom h-CBS heuristic, and State Hashing optimizations.
 
 ## Setup Instructions
 
-1. Ensure Python 3.x is installed on your machine.
-2. Install the required visualization dependencies by running:
-   ```bash
-   pip install -r requirements.txt
-   ```
+1. Ensure Python 3.x is installed.
+2. Install the required visualization dependencies:
+   `pip install -r requirements.txt`
+
+## Running the Code
+
+- **Baseline A\* \*\***test*\*\*:* `python baseline_astar.py`
+- **Standard CBS vs h-CBS test:** `python cbs_enhancement.py`
+- **Experiment 1 & 2 (Scaling):** `python run_experiments.py`
+- **Experiment 3 (Density):** `python run_density_exp.py`
+- **Experiment 4 (Heuristic Impact):** `python run_heuristic_exp.py`
+- **Experiment 5 (Hashing Impact):** `python run_hashing_exp.py`
+- **Generate Data Charts:** `python generate_heuristic_chart.py` and `python generate_hashing_chart.py`
