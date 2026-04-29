@@ -2,6 +2,12 @@ import time
 from cbs_enhancement import CBS_MAPF_Solver
 
 def run_experiment_5():
+    """
+    Experiment 5: Quantitative Evaluation of State Hashing (Transposition Tables).
+    Executes multiple iterations of a complex 4-agent crossing scenario to generate 
+    statistically rigorous average execution times, comparing performance with and 
+    without constraint node hashing.
+    """
     print("--- Experiment 5: Impact of State Hashing (Transposition Tables) ---")
     
     # A symmetrical grid that forces the tree to generate duplicate constraint realities
