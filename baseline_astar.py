@@ -1,15 +1,17 @@
 import heapq
 
 class Node:
-    def __init__(self, position, parent=None):
+    def __init__(self, position, time=0, parent=None):
         self.position = position
+        self.time = time # NEW: Nodes must now track the time step
         self.parent = parent
         self.g = 0 # Distance from start node
         self.h = 0 # Distance to goal node
         self.f = 0 # Total cost
 
     def __eq__(self, other):
-        return self.position == other.position
+        # NEW: Two nodes are only equal if they share the same position AND time
+        return self.position == other.position and self.time == other.time
 
     def __lt__(self, other):
         return self.f < other.f
@@ -18,21 +20,25 @@ def heuristic(a, b):
     # Manhattan distance for grid movement
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
-def astar(grid, start, end):
-    start_node = Node(start)
+def astar(grid, start, end, constraints=None):
+    # NEW: Accepts a list of constraints formatted as (position, time)
+    if constraints is None:
+        constraints = []
+        
+    start_node = Node(start, time=0)
     end_node = Node(end)
 
     open_list = []
-    closed_set = set()
+    closed_set = set() # Will now store (position, time) tuples
 
     heapq.heappush(open_list, start_node)
 
     while open_list:
         current_node = heapq.heappop(open_list)
-        closed_set.add(current_node.position)
+        closed_set.add((current_node.position, current_node.time))
 
         # Found the goal
-        if current_node == end_node:
+        if current_node.position == end_node.position:
             path = []
             current = current_node
             while current is not None:
@@ -40,11 +46,12 @@ def astar(grid, start, end):
                 current = current.parent
             return path[::-1] # Return reversed path
 
-        # Generate children (Adjacent squares: Up, Down, Left, Right)
-        directions = [(0, -1), (0, 1), (-1, 0), (1, 0)]
+        # Generate children. NEW: Added (0,0) so the agent can WAIT in place
+        directions = [(0, -1), (0, 1), (-1, 0), (1, 0), (0, 0)]
         
         for new_position in directions:
             node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
+            new_time = current_node.time + 1
 
             # Make sure within range
             if node_position[0] > (len(grid) - 1) or node_position[0] < 0 or node_position[1] > (len(grid[len(grid)-1]) -1) or node_position[1] < 0:
@@ -54,16 +61,20 @@ def astar(grid, start, end):
             if grid[node_position[0]][node_position[1]] != 0:
                 continue
 
-            if node_position in closed_set:
+            # NEW: Space-Time Constraint Check
+            # If CBS tells us we cannot be at this position at this time, skip it
+            if (node_position, new_time) in constraints:
                 continue
 
-            new_node = Node(node_position, current_node)
+            # Check if we have already evaluated this specific space-time state
+            if (node_position, new_time) in closed_set:
+                continue
+
+            new_node = Node(node_position, time=new_time, parent=current_node)
             new_node.g = current_node.g + 1
             new_node.h = heuristic(new_node.position, end_node.position)
             new_node.f = new_node.g + new_node.h
 
-            # Check if this path is better than one already in open list
-            # (Simplified for the baseline script)
             heapq.heappush(open_list, new_node)
 
     return None # No path found
