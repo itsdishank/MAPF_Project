@@ -3,6 +3,10 @@ import random
 from baseline_astar import astar
 
 def generate_grid(size, density):
+    """
+    Generates a randomized square grid with a specific density of static obstacles.
+    Ensures the start (0,0) and goal (size-1, size-1) coordinates are never blocked.
+    """
     grid = [[0]*size for _ in range(size)]
     obstacles = int(size * size * density)
     count = 0
