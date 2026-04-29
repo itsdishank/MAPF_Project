@@ -85,6 +85,7 @@ class CBS_MAPF_Solver:
     
     def solve(self):
         root = HighLevelNode()
+        closed_set = set() # NEW: Enhancement 3 - State Hashing
         
         # 1. Generate root node with independent A* paths
         for agent_id, data in self.agents.items():
@@ -99,6 +100,13 @@ class CBS_MAPF_Solver:
         
         while self.open_list:
             current_node = heapq.heappop(self.open_list)
+            
+            # NEW: Enhancement 3 - Prune duplicate constraint states
+            # We use frozenset because standard lists cannot be hashed into a set
+            constraint_hash = frozenset(current_node.constraints)
+            if constraint_hash in closed_set:
+                continue # Skip this node, we have already evaluated this exact reality!
+            closed_set.add(constraint_hash)
             
             conflict = self.find_first_conflict(current_node.solution)
             
@@ -130,7 +138,7 @@ class CBS_MAPF_Solver:
                 if new_path:
                     child_node.solution[agent_id] = new_path
                     child_node.cost = sum(len(p) - 1 for p in child_node.solution.values())
-                    child_node.h = self.count_all_conflicts(child_node.solution) # NEW: Calculate heuristic
+                    child_node.h = self.count_all_conflicts(child_node.solution) 
                     heapq.heappush(self.open_list, child_node)
                     
         return None
