@@ -2,6 +2,12 @@ import time
 from cbs_enhancement import CBS_MAPF_Solver
 
 def run_experiment_4():
+    """
+    Experiment 4: Quantitative Evaluation of the h-CBS Heuristic.
+    Runs a head-to-head comparison between Standard CBS and h-CBS in a highly 
+    congested 10x10 warehouse intersection to measure reductions in node 
+    expansions and overall execution time.
+    """
     print("--- Experiment 4: Standard CBS vs h-CBS (Heuristic Impact) ---")
     
     # Create a 10x10 grid with a central obstacle to force agents into tight corridors
