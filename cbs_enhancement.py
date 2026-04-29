@@ -1,49 +1,123 @@
-# cbs_enhancement.py
-# TODO: Full integration scheduled for Week 15 (Post-M2)
+import heapq
+import copy
+from baseline_astar import astar
 
 class HighLevelNode:
     def __init__(self):
-        self.constraints = []
-        self.solution = {}
-        self.cost = 0
+        self.constraints = [] # List of tuples: (agent_id, location, timestep)
+        self.solution = {}    # Dictionary: {agent_id: path}
+        self.cost = 0         # Sum of Costs (SOC)
         
     def __lt__(self, other):
-        # TODO: Implement tie-breaking logic based on h-CBS heuristic
+        # We will add the h-CBS tie-breaking here in the next step
         return self.cost < other.cost
+
+def get_location(path, time):
+    """Helper to return an agent's location at a specific time. Agents wait at goal when finished."""
+    if time < len(path):
+        return path[time]
+    else:
+        return path[-1]
 
 class CBS_MAPF_Solver:
     def __init__(self, grid, agents):
         self.grid = grid
-        self.agents = agents
+        self.agents = agents # Format: {'agent1': {'start': (x,y), 'goal': (x,y)}, ...}
         self.open_list = []
         
-    def find_conflicts(self, paths):
-        # TODO: Scan all agent paths for Vertex Conflicts (same cell, same time)
-        # TODO: Scan all agent paths for Edge Conflicts (swapping cells)
-        pass
-        
-    def generate_constraint(self, conflict):
-        # TODO: Branch the HighLevelNode into two new realities
-        pass
+    def find_first_conflict(self, solution):
+        agent_ids = list(solution.keys())
+        for i in range(len(agent_ids)):
+            for j in range(i + 1, len(agent_ids)):
+                a1 = agent_ids[i]
+                a2 = agent_ids[j]
+                path1 = solution[a1]
+                path2 = solution[a2]
+                
+                max_time = max(len(path1), len(path2))
+                
+                for t in range(max_time):
+                    loc1_t = get_location(path1, t)
+                    loc2_t = get_location(path2, t)
+                    
+                    # Detect Vertex Conflict
+                    if loc1_t == loc2_t:
+                        return {'type': 'vertex', 'time': t, 'location': loc1_t, 'agents': [a1, a2]}
+                    
+                    # Detect Edge Conflict
+                    if t > 0:
+                        loc1_prev = get_location(path1, t - 1)
+                        loc2_prev = get_location(path2, t - 1)
+                        if loc1_t == loc2_prev and loc1_prev == loc2_t:
+                            # FIX: Constrain them from entering their intended targets at time t
+                            return {'type': 'edge', 'time': t, 'location': (loc1_t, loc2_t), 'agents': [a1, a2]}
+        return None
         
     def solve(self):
-        """
-        Main loop for Conflict-Based Search.
-        Currently a structural stub for M2. Full logic pending.
-        """
-        print("Initializing High-Level Constraint Tree...")
-        print("Warning: h-CBS Heuristic not yet applied. Searching blindly.")
+        root = HighLevelNode()
         
-        # 1. Generate root node with independent A* paths (Decoupled)
-        # 2. Push to open_list
-        # 3. While open_list is not empty:
-        # 4.   Pop lowest cost node
-        # 5.   If no conflicts in node.solution -> RETURN SUCCESS
-        # 6.   conflict = find_conflicts()
-        # 7.   Branch realities: create child nodes with new constraints
+        # 1. Generate root node with independent A* paths
+        for agent_id, data in self.agents.items():
+            path = astar(self.grid, data['start'], data['goal'])
+            if not path:
+                return None # Unsolvable even independently
+            root.solution[agent_id] = path
+            root.cost += len(path) - 1
+            
+        heapq.heappush(self.open_list, root)
         
-        raise NotImplementedError("CBS logic stubbed for M2. Fallback to Baseline A* for immediate routing.")
+        while self.open_list:
+            current_node = heapq.heappop(self.open_list)
+            
+            conflict = self.find_first_conflict(current_node.solution)
+            
+            # If no conflicts exist, we found the optimal collision-free path!
+            if not conflict:
+                return current_node.solution
+                
+            # Branch realities to resolve the conflict
+            for agent_id in conflict['agents']:
+                child_node = HighLevelNode()
+                child_node.constraints = copy.deepcopy(current_node.constraints)
+                child_node.solution = copy.deepcopy(current_node.solution)
+                
+                # Create the new constraint
+                if conflict['type'] == 'vertex':
+                    new_constraint = (agent_id, conflict['location'], conflict['time'])
+                else: 
+                    # For edge conflicts, prevent the agent from entering its target node at time t
+                    idx = conflict['agents'].index(agent_id)
+                    loc_target = conflict['location'][idx] 
+                    new_constraint = (agent_id, loc_target, conflict['time'])
+                    
+                child_node.constraints.append(new_constraint)
+                
+                # Re-run A* for this specific agent with its newly updated constraints
+                agent_constraints = [(c[1], c[2]) for c in child_node.constraints if c[0] == agent_id]
+                new_path = astar(self.grid, self.agents[agent_id]['start'], self.agents[agent_id]['goal'], agent_constraints)
+                
+                if new_path:
+                    child_node.solution[agent_id] = new_path
+                    child_node.cost = sum(len(p) - 1 for p in child_node.solution.values())
+                    heapq.heappush(self.open_list, child_node)
+                    
+        return None
 
 if __name__ == '__main__':
-    print("CBS Enhancement Architecture Loaded.")
-    print("Pending integration with space-time A* low-level planner.")
+    # A brutal test: Two agents crossing a narrow 5x5 hallway in opposite directions
+    test_grid = [[0]*5 for _ in range(5)]
+    test_agents = {
+        'agent1': {'start': (2, 0), 'goal': (2, 4)},
+        'agent2': {'start': (2, 4), 'goal': (2, 0)}
+    }
+    
+    print("Testing CBS Multi-Agent Planner...")
+    solver = CBS_MAPF_Solver(test_grid, test_agents)
+    solution = solver.solve()
+    
+    if solution:
+        print("Success! Collision-free paths found:")
+        for a_id, path in solution.items():
+            print(f"{a_id}: {path}")
+    else:
+        print("Failed to find a solution.")

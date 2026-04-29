@@ -38,13 +38,15 @@ def astar(grid, start, end, constraints=None):
         closed_set.add((current_node.position, current_node.time))
 
         # Found the goal
-        if current_node.position == end_node.position:
-            path = []
-            current = current_node
-            while current is not None:
-                path.append(current.position)
-                current = current.parent
-            return path[::-1] # Return reversed path
+        if current_node.position == end_node.position:# NEW: Check if there are any future constraints at the goal AFTER our arrival time
+            future_constraints = any(pos == end_node.position and t >= current_node.time for (pos, t) in constraints)
+            if not future_constraints:
+                path = []
+                current = current_node
+                while current is not None:
+                    path.append(current.position)
+                    current = current.parent
+                return path[::-1] # Return reversed path
 
         # Generate children. NEW: Added (0,0) so the agent can WAIT in place
         directions = [(0, -1), (0, 1), (-1, 0), (1, 0), (0, 0)]
