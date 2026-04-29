@@ -17,7 +17,10 @@ class HighLevelNode:
         return self.cost < other.cost
 
 def get_location(path, time):
-    """Helper to return an agent's location at a specific time. Agents wait at goal when finished."""
+    """
+    Retrieves the specific coordinate of an agent at a given timestep.
+    If the requested time exceeds the path length, assumes the agent is resting at its goal.
+    """
     if time < len(path):
         return path[time]
     else:
@@ -34,6 +37,11 @@ class CBS_MAPF_Solver:
         self.nodes_expanded = 0 
         
     def find_first_conflict(self, solution):
+        """
+        Scans all agent paths in the current solution reality for collisions.
+        Detects and returns the first found Vertex Conflict (same cell, same time) 
+        or Edge Conflict (swapping adjacent cells, same time).
+        """
         agent_ids = list(solution.keys())
         for i in range(len(agent_ids)):
             for j in range(i + 1, len(agent_ids)):
@@ -84,6 +92,14 @@ class CBS_MAPF_Solver:
         return conflict_count
     
     def solve(self):
+        """
+        Executes the two-level Conflict-Based Search (CBS) algorithm.
+        Generates a high-level constraint tree to resolve multi-agent collisions.
+        Optionally applies h-CBS heuristic pruning and State Hashing to optimize search.
+        
+        Returns:
+            Tuple containing the solution dictionary (paths) and the total nodes expanded.
+        """
         root = HighLevelNode()
         closed_set = set()
         self.nodes_expanded = 0 # Reset counter when starting
