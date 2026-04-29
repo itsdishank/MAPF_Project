@@ -7,9 +7,13 @@ class HighLevelNode:
         self.constraints = [] # List of tuples: (agent_id, location, timestep)
         self.solution = {}    # Dictionary: {agent_id: path}
         self.cost = 0         # Sum of Costs (SOC)
+        self.h = 0            # NEW: h-CBS Heuristic (estimated remaining conflicts)
         
     def __lt__(self, other):
-        # We will add the h-CBS tie-breaking here in the next step
+        # Primary priority: Lowest Sum of Costs
+        if self.cost == other.cost:
+            # Secondary priority (h-CBS): Tie-break by picking the node with fewer conflicts
+            return self.h < other.h
         return self.cost < other.cost
 
 def get_location(path, time):
@@ -53,6 +57,32 @@ class CBS_MAPF_Solver:
                             return {'type': 'edge', 'time': t, 'location': (loc1_t, loc2_t), 'agents': [a1, a2]}
         return None
         
+    def count_all_conflicts(self, solution):
+        """h-CBS Heuristic: Scans the entire solution and returns the total number of conflicts."""
+        conflict_count = 0
+        agent_ids = list(solution.keys())
+        for i in range(len(agent_ids)):
+            for j in range(i + 1, len(agent_ids)):
+                a1 = agent_ids[i]
+                a2 = agent_ids[j]
+                path1 = solution[a1]
+                path2 = solution[a2]
+                
+                max_time = max(len(path1), len(path2))
+                for t in range(max_time):
+                    loc1_t = get_location(path1, t)
+                    loc2_t = get_location(path2, t)
+                    
+                    if loc1_t == loc2_t:
+                        conflict_count += 1
+                    elif t > 0:
+                        loc1_prev = get_location(path1, t - 1)
+                        loc2_prev = get_location(path2, t - 1)
+                        if loc1_t == loc2_prev and loc1_prev == loc2_t:
+                            conflict_count += 1
+                            
+        return conflict_count
+    
     def solve(self):
         root = HighLevelNode()
         
@@ -64,6 +94,7 @@ class CBS_MAPF_Solver:
             root.solution[agent_id] = path
             root.cost += len(path) - 1
             
+        root.h = self.count_all_conflicts(root.solution)
         heapq.heappush(self.open_list, root)
         
         while self.open_list:
@@ -99,6 +130,7 @@ class CBS_MAPF_Solver:
                 if new_path:
                     child_node.solution[agent_id] = new_path
                     child_node.cost = sum(len(p) - 1 for p in child_node.solution.values())
+                    child_node.h = self.count_all_conflicts(child_node.solution) # NEW: Calculate heuristic
                     heapq.heappush(self.open_list, child_node)
                     
         return None
